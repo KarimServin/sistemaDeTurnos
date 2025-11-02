@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Vista principal de turnos
  */
@@ -16,14 +17,14 @@ ob_start();
 ?>
 
 <header class="cabecera">
-    <h1><?php echo APP_NAME; ?></h1>
+    <h1><?php echo htmlspecialchars(APP_NAME, ENT_QUOTES, 'UTF-8'); ?></h1>
     <p>Sistema de gestión de turnos</p>
 </header>
 
 <main class="contenido-principal">
     <!-- Sección del formulario -->
     <section class="seccion-formulario">
-        <?php 
+        <?php
         // Incluir el partial del formulario
         $rutaPartial = VIEWS_PATH . DIRECTORY_SEPARATOR . 'partials' . DIRECTORY_SEPARATOR . 'formulario-turno.php';
         if (file_exists($rutaPartial)) {
@@ -34,7 +35,7 @@ ob_start();
 
     <!-- Sección de filtros -->
     <section class="seccion-filtros">
-        <?php 
+        <?php
         // Incluir el partial de filtros
         $rutaPartial = VIEWS_PATH . DIRECTORY_SEPARATOR . 'partials' . DIRECTORY_SEPARATOR . 'filtros-turnos.php';
         if (file_exists($rutaPartial)) {
@@ -45,7 +46,7 @@ ob_start();
 
     <!-- Sección de la tabla de turnos -->
     <section class="seccion-tabla">
-        <?php 
+        <?php
         // Incluir el partial de la tabla
         $rutaPartial = VIEWS_PATH . DIRECTORY_SEPARATOR . 'partials' . DIRECTORY_SEPARATOR . 'tabla-turnos.php';
         if (file_exists($rutaPartial)) {
@@ -65,4 +66,3 @@ if (file_exists($rutaLayout)) {
     require_once $rutaLayout;
 }
 ?>
-

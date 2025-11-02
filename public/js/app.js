@@ -2,6 +2,33 @@
  * Aplicación principal de JavaScript para el sistema de turnos
  */
 
+// Utilidad para escapar HTML y prevenir XSS
+const EscapadorHtml = {
+    /**
+     * Escapa texto para prevenir XSS
+     */
+    escapar(texto) {
+        if (texto === null || texto === undefined) {
+            return '';
+        }
+        const div = document.createElement('div');
+        div.textContent = String(texto);
+        return div.innerHTML;
+    },
+    
+    /**
+     * Valida y escapa un ID numérico
+     */
+    validarId(id) {
+        const idNumerico = parseInt(id, 10);
+        if (isNaN(idNumerico) || idNumerico <= 0) {
+            console.error('ID inválido:', id);
+            return null;
+        }
+        return idNumerico;
+    }
+};
+
 // Clase para manejar la gestión de turnos
 class TurnoApp {
     constructor() {
@@ -137,15 +164,16 @@ class TurnoApp {
     }
 
     generarFilaTabla(turno) {
+        // Escapar todos los datos del usuario antes de insertarlos en el HTML para prevenir XSS
         return `
             <tr>
-                <td>${turno.id}</td>
-                <td>${turno.nombre}</td>
-                <td>${turno.email}</td>
-                <td>${turno.telefono}</td>
-                <td>${turno.fecha}</td>
-                <td>${turno.hora}</td>
-                <td>${turno.servicio}</td>
+                <td>${EscapadorHtml.escapar(turno.id)}</td>
+                <td>${EscapadorHtml.escapar(turno.nombre)}</td>
+                <td>${EscapadorHtml.escapar(turno.email)}</td>
+                <td>${EscapadorHtml.escapar(turno.telefono)}</td>
+                <td>${EscapadorHtml.escapar(turno.fecha)}</td>
+                <td>${EscapadorHtml.escapar(turno.hora)}</td>
+                <td>${EscapadorHtml.escapar(turno.servicio)}</td>
                 <td>${this.generarBadgeEstado(turno.estado)}</td>
                 <td>${this.generarBotonesAcciones(turno.id)}</td>
             </tr>
@@ -153,27 +181,49 @@ class TurnoApp {
     }
 
     generarBadgeEstado(estado) {
+        // Validar que el estado sea uno permitido para prevenir XSS en atributos
+        const estadosPermitidos = ['pendiente', 'confirmado', 'cancelado', 'completado'];
+        const estadoLimpio = estadosPermitidos.includes(estado) ? estado : 'pendiente';
+        
         const textos = {
             'pendiente': 'Pendiente',
             'confirmado': 'Confirmado',
             'cancelado': 'Cancelado',
             'completado': 'Completado'
         };
-        const texto = textos[estado] || estado;
-        return `<span class="estado estado-${estado}">${texto}</span>`;
+        
+        // Escapar el texto para prevenir XSS
+        const texto = textos[estadoLimpio] || EscapadorHtml.escapar(estadoLimpio);
+        // estadoLimpio ya está validado contra lista permitida, seguro para usar en clase CSS
+        return `<span class="estado estado-${estadoLimpio}">${texto}</span>`;
     }
 
     generarBotonesAcciones(id) {
+        // Validar que el ID sea numérico para prevenir inyección de código
+        const idNumerico = EscapadorHtml.validarId(id);
+        if (idNumerico === null) {
+            return '';
+        }
+        
         return `
             <div class="acciones">
-                <button class="boton boton-primario boton-pequeno" onclick="turnoApp.editarTurno(${id})">Editar</button>
-                <button class="boton boton-peligro boton-pequeno" onclick="turnoApp.eliminarTurno(${id})">Eliminar</button>
+                <button class="boton boton-primario boton-pequeno" onclick="turnoApp.editarTurno(${idNumerico})">Editar</button>
+                <button class="boton boton-peligro boton-pequeno" onclick="turnoApp.eliminarTurno(${idNumerico})">Eliminar</button>
             </div>
         `;
     }
 
     editarTurno(id) {
-        this.hacerPeticion('GET', `${this.apiUrl}?id=${id}`)
+        // Validar ID antes de hacer la petición
+        const idNumerico = EscapadorHtml.validarId(id);
+        if (idNumerico === null) {
+            Utilidades.mostrarMensaje('ID de turno inválido', 'error');
+            return;
+        }
+        
+        // Escapar el ID en la URL para prevenir inyección
+        const idEscapado = encodeURIComponent(idNumerico);
+        this.hacerPeticion('GET', `${this.apiUrl}?id=${idEscapado}`)
             .then(resultado => {
                 if (resultado.exito) {
                     this.cargarTurnoEnFormulario(resultado.datos);
@@ -194,10 +244,22 @@ class TurnoApp {
             console.log('Datos del turno recibidos:', turno);
         }
         
-        document.getElementById('turno-id').value = turno.id || '';
-        document.getElementById('nombre').value = turno.nombre || '';
-        document.getElementById('email').value = turno.email || '';
-        document.getElementById('telefono').value = turno.telefono || '';
+        // Los campos de formulario escapan automáticamente, pero por seguridad también lo hacemos aquí
+        // Usar textContent/value es seguro porque el navegador escapa automáticamente
+        const elementos = {
+            'turno-id': turno.id || '',
+            'nombre': turno.nombre || '',
+            'email': turno.email || '',
+            'telefono': turno.telefono || ''
+        };
+        
+        // Asignar valores de forma segura (el navegador escapa automáticamente en .value)
+        Object.keys(elementos).forEach(id => {
+            const elemento = document.getElementById(id);
+            if (elemento) {
+                elemento.value = elementos[id];
+            }
+        });
         
         // Manejar fecha - asegurar formato YYYY-MM-DD
         const fechaCampo = document.getElementById('fecha');
@@ -231,11 +293,10 @@ class TurnoApp {
             return;
         }
 
-        // Asegurar que el ID sea numérico
-        const idNumerico = parseInt(id, 10);
-        if (isNaN(idNumerico)) {
+        // Validar ID usando el validador centralizado
+        const idNumerico = EscapadorHtml.validarId(id);
+        if (idNumerico === null) {
             Utilidades.mostrarMensaje('ID de turno inválido', 'error');
-            console.error('ID inválido recibido:', id);
             return;
         }
 
@@ -301,9 +362,20 @@ class TurnoApp {
         let url = this.apiUrl;
         const parametros = [];
 
-        if (filtros.fecha) parametros.push(`fecha=${filtros.fecha}`);
-        if (filtros.estado) parametros.push(`estado=${filtros.estado}`);
-        if (filtros.email) parametros.push(`email=${filtros.email}`);
+        // Escapar todos los parámetros de URL para prevenir inyección
+        if (filtros.fecha) {
+            parametros.push(`fecha=${encodeURIComponent(filtros.fecha)}`);
+        }
+        if (filtros.estado) {
+            // Validar que el estado sea uno permitido
+            const estadosPermitidos = ['pendiente', 'confirmado', 'cancelado', 'completado'];
+            if (estadosPermitidos.includes(filtros.estado)) {
+                parametros.push(`estado=${encodeURIComponent(filtros.estado)}`);
+            }
+        }
+        if (filtros.email) {
+            parametros.push(`email=${encodeURIComponent(filtros.email)}`);
+        }
 
         if (parametros.length > 0) {
             url += '?' + parametros.join('&');
@@ -313,19 +385,33 @@ class TurnoApp {
     }
 
     hacerPeticion(metodo, url, datos = null) {
+        // Validar método HTTP
+        const metodosPermitidos = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
+        const metodoValido = metodosPermitidos.includes(metodo.toUpperCase()) ? metodo.toUpperCase() : 'GET';
+        
         const opciones = {
-            method: metodo,
+            method: metodoValido,
             headers: {
                 'Content-Type': 'application/json',
             }
         };
 
-        if (datos && metodo === 'POST') {
+        if (datos && (metodoValido === 'POST' || metodoValido === 'PUT' || metodoValido === 'PATCH')) {
             opciones.body = JSON.stringify(datos);
         }
 
         return fetch(url, opciones)
-            .then(respuesta => respuesta.json());
+            .then(respuesta => {
+                // Validar que la respuesta sea válida
+                if (!respuesta.ok) {
+                    throw new Error(`HTTP error! status: ${respuesta.status}`);
+                }
+                return respuesta.json();
+            })
+            .catch(error => {
+                console.error('Error en petición:', error);
+                throw error;
+            });
     }
 }
 
@@ -335,8 +421,13 @@ class Utilidades {
         const mensajeDiv = document.getElementById('mensaje');
         if (!mensajeDiv) return;
 
-        mensajeDiv.className = `alerta alerta-${tipo}`;
-        mensajeDiv.textContent = mensaje;
+        // Validar tipo de mensaje
+        const tiposPermitidos = ['info', 'exito', 'error', 'advertencia'];
+        const tipoLimpio = tiposPermitidos.includes(tipo) ? tipo : 'info';
+        
+        mensajeDiv.className = `alerta alerta-${tipoLimpio}`;
+        // textContent escapa automáticamente, así que es seguro
+        mensajeDiv.textContent = mensaje || '';
         mensajeDiv.style.display = 'block';
 
         setTimeout(() => {

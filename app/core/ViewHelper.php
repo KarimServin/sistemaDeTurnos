@@ -9,26 +9,49 @@ class ViewHelper {
      * Generar un mensaje de alerta
      */
     public static function alerta($mensaje, $tipo = 'info') {
-        $clase = 'alerta alerta-' . $tipo;
-        return "<div class='{$clase}'>{$mensaje}</div>";
+        $clase = htmlspecialchars($tipo, ENT_QUOTES, 'UTF-8');
+        $mensajeEscapado = htmlspecialchars($mensaje, ENT_QUOTES, 'UTF-8');
+        return "<div class='alerta alerta-{$clase}'>{$mensajeEscapado}</div>";
     }
 
     /**
      * Generar un botón
      */
     public static function boton($texto, $tipo = 'primario', $onclick = '', $atributos = '') {
-        $onclickAttr = $onclick ? "onclick='{$onclick}'" : '';
-        $clasesFinales = "boton boton-{$tipo}";
-        $atributosFinales = trim("class='{$clasesFinales}' {$onclickAttr} {$atributos}");
-        return "<button {$atributosFinales}>{$texto}</button>";
+        // Escapar todos los valores para prevenir XSS
+        $textoEscapado = htmlspecialchars($texto, ENT_QUOTES, 'UTF-8');
+        $tipoEscapado = htmlspecialchars($tipo, ENT_QUOTES, 'UTF-8');
+        
+        // Validar que onclick sea seguro (solo funciones JavaScript válidas, sin <script>)
+        $onclickAttr = '';
+        if ($onclick) {
+            // Permitir solo llamadas a funciones seguras (validación básica)
+            if (preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*\([^)]*\)$/', $onclick)) {
+                $onclickEscapado = htmlspecialchars($onclick, ENT_QUOTES, 'UTF-8');
+                $onclickAttr = "onclick='{$onclickEscapado}'";
+            }
+        }
+        
+        // Escapar atributos adicionales
+        $atributosEscapados = htmlspecialchars($atributos, ENT_QUOTES, 'UTF-8');
+        $clasesFinales = "boton boton-{$tipoEscapado}";
+        $atributosFinales = trim("class='{$clasesFinales}' {$onclickAttr} {$atributosEscapados}");
+        
+        return "<button {$atributosFinales}>{$textoEscapado}</button>";
     }
 
     /**
      * Generar un campo de formulario
      */
     public static function campoFormulario($tipo, $nombre, $etiqueta, $valor = '', $requerido = false, $opciones = []) {
+        // Escapar todos los valores para prevenir XSS
+        $nombreEscapado = htmlspecialchars($nombre, ENT_QUOTES, 'UTF-8');
+        $etiquetaEscapada = htmlspecialchars($etiqueta, ENT_QUOTES, 'UTF-8');
+        $tipoEscapado = htmlspecialchars($tipo, ENT_QUOTES, 'UTF-8');
+        $valorEscapado = htmlspecialchars($valor, ENT_QUOTES, 'UTF-8');
+        
         $html = "<div class='grupo-formulario'>";
-        $html .= "<label for='{$nombre}'>{$etiqueta}" . ($requerido ? ' *' : '') . "</label>";
+        $html .= "<label for='{$nombreEscapado}'>{$etiquetaEscapada}" . ($requerido ? ' *' : '') . "</label>";
         
         switch ($tipo) {
             case 'text':
@@ -37,20 +60,23 @@ class ViewHelper {
             case 'date':
             case 'time':
                 $requeridoAttr = $requerido ? 'required' : '';
-                $html .= "<input type='{$tipo}' id='{$nombre}' name='{$nombre}' value='{$valor}' {$requeridoAttr}>";
+                $html .= "<input type='{$tipoEscapado}' id='{$nombreEscapado}' name='{$nombreEscapado}' value='{$valorEscapado}' {$requeridoAttr}>";
                 break;
                 
             case 'textarea':
                 $requeridoAttr = $requerido ? 'required' : '';
-                $html .= "<textarea id='{$nombre}' name='{$nombre}' {$requeridoAttr}>{$valor}</textarea>";
+                $html .= "<textarea id='{$nombreEscapado}' name='{$nombreEscapado}' {$requeridoAttr}>{$valorEscapado}</textarea>";
                 break;
                 
             case 'select':
-                $html .= "<select id='{$nombre}' name='{$nombre}'>";
+                $html .= "<select id='{$nombreEscapado}' name='{$nombreEscapado}'>";
                 if (isset($opciones['opciones']) && is_array($opciones['opciones'])) {
                     foreach ($opciones['opciones'] as $valorOpcion => $textoOpcion) {
+                        // Escapar valores y textos de opciones
+                        $valorOpcionEscapado = htmlspecialchars($valorOpcion, ENT_QUOTES, 'UTF-8');
+                        $textoOpcionEscapado = htmlspecialchars($textoOpcion, ENT_QUOTES, 'UTF-8');
                         $selected = ($valor == $valorOpcion) ? 'selected' : '';
-                        $html .= "<option value='{$valorOpcion}' {$selected}>{$textoOpcion}</option>";
+                        $html .= "<option value='{$valorOpcionEscapado}' {$selected}>{$textoOpcionEscapado}</option>";
                     }
                 }
                 $html .= "</select>";
@@ -72,8 +98,12 @@ class ViewHelper {
             'completado' => 'Completado'
         ];
         
-        $texto = $textos[$estado] ?? $estado;
-        return "<span class='estado estado-{$estado}'>{$texto}</span>";
+        // Validar que el estado sea uno de los permitidos para evitar XSS en clase CSS
+        $estadosPermitidos = ['pendiente', 'confirmado', 'cancelado', 'completado'];
+        $estadoLimpio = in_array($estado, $estadosPermitidos) ? $estado : 'pendiente';
+        
+        $texto = $textos[$estadoLimpio] ?? htmlspecialchars($estadoLimpio, ENT_QUOTES, 'UTF-8');
+        return "<span class='estado estado-{$estadoLimpio}'>" . htmlspecialchars($texto, ENT_QUOTES, 'UTF-8') . "</span>";
     }
 
     /**
