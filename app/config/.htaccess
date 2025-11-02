@@ -1,0 +1,14 @@
+# Protección adicional para archivos de configuración
+# Bloquear completamente el acceso a este directorio
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule .* - [F,L]
+</IfModule>
+
+# Bloquear acceso a todos los tipos de archivos
+<FilesMatch ".*">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+

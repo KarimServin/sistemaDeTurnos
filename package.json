@@ -1,0 +1,13 @@
+{
+  "name": "sistema-de-turnos",
+  "version": "1.0.0",
+  "description": "Sistema de gestión de turnos",
+  "scripts": {
+    "dev": "browser-sync start --proxy localhost/sistemaDeTurnos/public --files 'public/**/*.css, public/**/*.js, app/**/*.php, public/index.php' --no-notify --reload-delay 300",
+    "watch": "browser-sync start --proxy localhost/sistemaDeTurnos/public --files 'public/**/*.css, public/**/*.js, app/**/*.php, public/index.php' --no-notify --reload-delay 300"
+  },
+  "devDependencies": {
+    "browser-sync": "^2.29.0"
+  }
+}
+

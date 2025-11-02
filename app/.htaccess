@@ -1,0 +1,16 @@
+# Bloquear acceso directo a todos los archivos en el directorio app/
+# Solo permitir acceso a través del sistema de la aplicación
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Denegar acceso directo a todos los archivos
+    RewriteRule .* - [F,L]
+</IfModule>
+
+# Alternativa si no tienes mod_rewrite
+<FilesMatch "\.(php|ini|conf|config)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
